@@ -1,0 +1,1881 @@
+
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bravais Lattices — Interactive Learning</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+:root{
+    --bg:#07111f;
+    --card:#0e1c2e;
+    --card2:#13243a;
+    --text:#edf5ff;
+    --muted:#9db0c7;
+    --accent:#38bdf8;
+    --accent2:#818cf8;
+    --border:#223853;
+    --success:#34d399;
+    --danger:#fb7185;
+}
+
+body{
+    font-family:Arial, Helvetica, sans-serif;
+    background:
+        radial-gradient(circle at 10% 10%,rgba(56,189,248,.12),transparent 30%),
+        radial-gradient(circle at 90% 20%,rgba(129,140,248,.12),transparent 30%),
+        var(--bg);
+    color:var(--text);
+    min-height:100vh;
+}
+
+/* HEADER */
+header{
+    padding:28px 7%;
+    border-bottom:1px solid var(--border);
+    background:rgba(7,17,31,.86);
+    backdrop-filter:blur(12px);
+    position:sticky;
+    top:0;
+    z-index:50;
+}
+
+.header-inner{
+    max-width:1400px;
+    margin:auto;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+}
+
+.logo{
+    font-size:25px;
+    font-weight:800;
+}
+
+.logo span{
+    color:var(--accent);
+}
+
+nav{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+nav button{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--muted);
+    padding:9px 15px;
+    border-radius:9px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+nav button:hover{
+    color:white;
+    border-color:var(--accent);
+}
+
+/* HERO */
+.hero{
+    max-width:1400px;
+    margin:auto;
+    padding:70px 7% 40px;
+}
+
+.hero h1{
+    font-size:clamp(38px,6vw,75px);
+    line-height:1;
+    max-width:850px;
+    margin-bottom:22px;
+}
+
+.hero h1 span{
+    color:var(--accent);
+}
+
+.hero p{
+    color:var(--muted);
+    max-width:750px;
+    font-size:18px;
+    line-height:1.7;
+}
+
+.stats{
+    display:flex;
+    gap:18px;
+    flex-wrap:wrap;
+    margin-top:35px;
+}
+
+.stat{
+    background:var(--card);
+    border:1px solid var(--border);
+    padding:18px 24px;
+    border-radius:15px;
+    min-width:150px;
+}
+
+.stat strong{
+    display:block;
+    font-size:28px;
+    color:var(--accent);
+}
+
+.stat small{
+    color:var(--muted);
+}
+
+/* MAIN */
+.container{
+    max-width:1400px;
+    margin:auto;
+    padding:20px 7% 70px;
+}
+
+.section-title{
+    font-size:32px;
+    margin:50px 0 20px;
+}
+
+.section-subtitle{
+    color:var(--muted);
+    margin-bottom:25px;
+}
+
+/* LATTICE GRID */
+.controls{
+    display:flex;
+    gap:12px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+}
+
+#search{
+    flex:1;
+    min-width:230px;
+    background:var(--card);
+    color:white;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:13px 15px;
+    outline:none;
+}
+
+.filter{
+    background:var(--card);
+    color:white;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:13px;
+}
+
+.lattice-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(245px,1fr));
+    gap:17px;
+}
+
+.lattice-card{
+    background:linear-gradient(145deg,var(--card),#0a1728);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:21px;
+    cursor:pointer;
+    transition:.25s;
+    position:relative;
+    overflow:hidden;
+}
+
+.lattice-card:before{
+    content:"";
+    position:absolute;
+    width:100px;
+    height:100px;
+    background:var(--accent);
+    opacity:.05;
+    border-radius:50%;
+    right:-35px;
+    top:-35px;
+}
+
+.lattice-card:hover{
+    transform:translateY(-5px);
+    border-color:var(--accent);
+    box-shadow:0 15px 35px rgba(0,0,0,.25);
+}
+
+.number{
+    color:var(--accent);
+    font-size:13px;
+    font-weight:bold;
+}
+
+.lattice-card h3{
+    margin:7px 0;
+    font-size:21px;
+}
+
+.system{
+    display:inline-block;
+    background:#172b44;
+    color:#b9d8ff;
+    padding:5px 9px;
+    border-radius:6px;
+    font-size:12px;
+    margin-bottom:13px;
+}
+
+.lattice-card p{
+    color:var(--muted);
+    line-height:1.5;
+    font-size:14px;
+}
+
+/* VIEWER */
+.viewer-section{
+    margin-top:60px;
+}
+
+.viewer{
+    display:grid;
+    grid-template-columns:1.5fr 1fr;
+    gap:20px;
+}
+
+#canvas-container{
+    min-height:550px;
+    background:
+        radial-gradient(circle,#142a42 0%,#07111f 70%);
+    border:1px solid var(--border);
+    border-radius:20px;
+    overflow:hidden;
+    position:relative;
+}
+
+.viewer-info{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:28px;
+}
+
+.viewer-info h2{
+    font-size:31px;
+    margin-bottom:8px;
+}
+
+.badge{
+    display:inline-block;
+    background:#102d40;
+    color:var(--accent);
+    border:1px solid #1e526c;
+    border-radius:20px;
+    padding:6px 12px;
+    font-size:13px;
+    margin:5px 0 20px;
+}
+
+.info-block{
+    margin:20px 0;
+}
+
+.info-block h4{
+    color:var(--accent);
+    margin-bottom:7px;
+}
+
+.info-block p,
+.info-block li{
+    color:var(--muted);
+    line-height:1.6;
+}
+
+.info-block ul{
+    padding-left:20px;
+}
+
+.parameters{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:9px;
+}
+
+.param{
+    background:var(--card2);
+    padding:12px;
+    border-radius:8px;
+}
+
+.param b{
+    display:block;
+    color:white;
+}
+
+.param span{
+    color:var(--muted);
+    font-size:13px;
+}
+
+/* BUTTONS */
+.action-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:18px;
+}
+
+.btn{
+    padding:11px 17px;
+    border:none;
+    border-radius:9px;
+    cursor:pointer;
+    background:var(--accent);
+    color:#03101b;
+    font-weight:bold;
+}
+
+.btn.secondary{
+    background:#182a40;
+    color:white;
+    border:1px solid var(--border);
+}
+
+/* TABLE */
+.table-wrapper{
+    overflow-x:auto;
+    border:1px solid var(--border);
+    border-radius:15px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:800px;
+    background:var(--card);
+}
+
+th,td{
+    padding:14px;
+    text-align:left;
+    border-bottom:1px solid var(--border);
+}
+
+th{
+    background:#14263b;
+    color:var(--accent);
+}
+
+td{
+    color:var(--muted);
+}
+
+tr:hover td{
+    background:#13243a;
+    color:white;
+}
+
+/* QUIZ */
+.quiz{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:30px;
+    max-width:850px;
+}
+
+.question-number{
+    color:var(--accent);
+    margin-bottom:10px;
+}
+
+.question{
+    font-size:23px;
+    line-height:1.4;
+    margin-bottom:20px;
+}
+
+.options{
+    display:grid;
+    gap:10px;
+}
+
+.option{
+    padding:15px;
+    border-radius:10px;
+    background:var(--card2);
+    border:1px solid var(--border);
+    cursor:pointer;
+    transition:.2s;
+}
+
+.option:hover{
+    border-color:var(--accent);
+}
+
+.option.correct{
+    border-color:var(--success);
+    background:rgba(52,211,153,.12);
+}
+
+.option.wrong{
+    border-color:var(--danger);
+    background:rgba(251,113,133,.12);
+}
+
+#quiz-feedback{
+    margin-top:15px;
+    color:var(--muted);
+    line-height:1.5;
+}
+
+/* CONCEPT */
+.concepts{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:18px;
+}
+
+.concept{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:23px;
+}
+
+.concept h3{
+    margin-bottom:10px;
+    color:var(--accent);
+}
+
+.concept p{
+    color:var(--muted);
+    line-height:1.6;
+}
+
+/* FOOTER */
+footer{
+    border-top:1px solid var(--border);
+    padding:35px 7%;
+    color:var(--muted);
+    text-align:center;
+}
+
+/* MODAL */
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.75);
+    z-index:100;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+}
+
+.modal-content{
+    background:#0d1b2c;
+    border:1px solid var(--border);
+    border-radius:18px;
+    max-width:700px;
+    width:100%;
+    max-height:85vh;
+    overflow:auto;
+    padding:30px;
+}
+
+.close{
+    float:right;
+    font-size:25px;
+    cursor:pointer;
+    color:var(--muted);
+}
+
+@media(max-width:900px){
+    .viewer{
+        grid-template-columns:1fr;
+    }
+
+    #canvas-container{
+        min-height:450px;
+    }
+
+    header{
+        position:relative;
+    }
+}
+
+@media(max-width:600px){
+    .hero{
+        padding-top:40px;
+    }
+
+    .parameters{
+        grid-template-columns:1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<div class="header-inner">
+    <div class="logo">Bravais<span>Lab</span></div>
+
+    <nav>
+        <button onclick="scrollToSection('lattices')">Lattices</button>
+        <button onclick="scrollToSection('viewer')">3D Viewer</button>
+        <button onclick="scrollToSection('comparison')">Compare</button>
+        <button onclick="scrollToSection('quiz')">Quiz</button>
+    </nav>
+</div>
+</header>
+
+<section class="hero">
+    <h1>Explore the <span>14 Bravais Lattices</span></h1>
+
+    <p>
+        An interactive learning environment for understanding crystal systems,
+        lattice points, unit cells, symmetry, properties and applications
+        of the fourteen Bravais lattices.
+    </p>
+
+    <div class="stats">
+        <div class="stat">
+            <strong>14</strong>
+            <small>Bravais lattices</small>
+        </div>
+
+        <div class="stat">
+            <strong>7</strong>
+            <small>Crystal systems</small>
+        </div>
+
+        <div class="stat">
+            <strong>3D</strong>
+            <small>Interactive visualization</small>
+        </div>
+
+        <div class="stat">
+            <strong>∞</strong>
+            <small>Learning possibilities</small>
+        </div>
+    </div>
+</section>
+
+<main class="container">
+
+<section id="lattices">
+<h2 class="section-title">The 14 Bravais Lattices</h2>
+<p class="section-subtitle">
+    Select any lattice to inspect its structure and properties.
+</p>
+
+<div class="controls">
+    <input id="search" type="text"
+        placeholder="🔎 Search lattice, system, centering..."
+        oninput="renderCards()">
+
+    <select class="filter" id="systemFilter" onchange="renderCards()">
+        <option value="all">All crystal systems</option>
+        <option value="Cubic">Cubic</option>
+        <option value="Tetragonal">Tetragonal</option>
+        <option value="Orthorhombic">Orthorhombic</option>
+        <option value="Monoclinic">Monoclinic</option>
+        <option value="Triclinic">Triclinic</option>
+        <option value="Hexagonal">Hexagonal</option>
+        <option value="Trigonal">Trigonal</option>
+    </select>
+</div>
+
+<div class="lattice-grid" id="latticeGrid"></div>
+</section>
+
+
+<section id="viewer" class="viewer-section">
+
+<h2 class="section-title">Interactive 3D Viewer</h2>
+
+<p class="section-subtitle">
+    Drag to rotate • Scroll to zoom • Right-click to move
+</p>
+
+<div class="viewer">
+
+<div id="canvas-container"></div>
+
+<div class="viewer-info">
+
+<h2 id="selectedName">Simple Cubic</h2>
+
+<div class="badge" id="selectedSystem">Cubic System</div>
+
+<div class="info-block">
+<h4>Centering</h4>
+<p id="selectedCentering">Primitive (P)</p>
+</div>
+
+<div class="info-block">
+<h4>Unit Cell Parameters</h4>
+
+<div class="parameters">
+    <div class="param">
+        <b id="paramA">a</b>
+        <span>edge length</span>
+    </div>
+
+    <div class="param">
+        <b id="paramB">a</b>
+        <span>edge length</span>
+    </div>
+
+    <div class="param">
+        <b id="paramC">a</b>
+        <span>edge length</span>
+    </div>
+
+    <div class="param">
+        <b id="paramAngles">90°</b>
+        <span>angles</span>
+    </div>
+</div>
+</div>
+
+<div class="info-block">
+<h4>Key Properties</h4>
+<ul id="selectedProperties"></ul>
+</div>
+
+<div class="info-block">
+<h4>Examples / Applications</h4>
+<p id="selectedExamples"></p>
+</div>
+
+<div class="action-row">
+    <button class="btn" onclick="randomLattice()">🎲 Random Lattice</button>
+    <button class="btn secondary" onclick="resetCamera()">↻ Reset View</button>
+</div>
+
+</div>
+</div>
+</section>
+
+
+<section id="comparison">
+
+<h2 class="section-title">Comparison Table</h2>
+
+<p class="section-subtitle">
+    Quickly compare the fourteen Bravais lattices.
+</p>
+
+<div class="table-wrapper">
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Lattice</th>
+<th>Crystal System</th>
+<th>Centering</th>
+<th>Atoms / Unit Cell*</th>
+<th>Typical Parameters</th>
+</tr>
+</thead>
+
+<tbody id="comparisonBody"></tbody>
+
+</table>
+</div>
+
+<p style="color:#71849a;margin-top:12px;font-size:13px;">
+*Effective lattice points per conventional unit cell.
+</p>
+
+</section>
+
+
+<section>
+
+<h2 class="section-title">Important Concepts</h2>
+
+<div class="concepts">
+
+<div class="concept">
+<h3>What is a lattice?</h3>
+<p>
+A lattice is an infinite periodic arrangement of points in space.
+Each lattice point has an identical environment.
+</p>
+</div>
+
+<div class="concept">
+<h3>What is a unit cell?</h3>
+<p>
+A unit cell is the smallest repeating geometrical region
+that can generate the entire crystal lattice by translation.
+</p>
+</div>
+
+<div class="concept">
+<h3>What is a Bravais lattice?</h3>
+<p>
+A Bravais lattice is a distinct periodic point arrangement
+consistent with translational symmetry in three dimensions.
+</p>
+</div>
+
+<div class="concept">
+<h3>Why are there 14?</h3>
+<p>
+The combination of crystal-system symmetry and allowed
+lattice-center translations produces exactly 14 unique
+three-dimensional Bravais lattices.
+</p>
+</div>
+
+<div class="concept">
+<h3>Primitive lattice — P</h3>
+<p>
+A primitive cell has lattice points only at its corners.
+The total contribution is one lattice point per primitive
+unit cell.
+</p>
+</div>
+
+<div class="concept">
+<h3>Body-centered — I</h3>
+<p>
+In addition to corner points, there is one lattice point
+at the center of the unit cell.
+</p>
+</div>
+
+<div class="concept">
+<h3>Face-centered — F</h3>
+<p>
+Lattice points occur at all corners and at the centers
+of all six faces. The effective number is four.
+</p>
+</div>
+
+<div class="concept">
+<h3>Base-centered — C</h3>
+<p>
+Additional lattice points occur at the centers of a pair
+of opposite faces.
+</p>
+</div>
+
+</div>
+</section>
+
+
+<section id="quiz">
+
+<h2 class="section-title">Test Your Knowledge 🧠</h2>
+
+<p class="section-subtitle">
+    Answer the questions and check your understanding.
+</p>
+
+<div class="quiz">
+
+<div class="question-number" id="questionNumber">
+Question 1
+</div>
+
+<div class="question" id="questionText">
+Loading...
+</div>
+
+<div class="options" id="options"></div>
+
+<div id="quiz-feedback"></div>
+
+<div class="action-row">
+<button class="btn" onclick="nextQuestion()">Next Question →</button>
+</div>
+
+</div>
+</section>
+
+</main>
+
+<footer>
+    <p>BravaisLab — Interactive Crystal Structure Learning</p>
+    <p style="margin-top:8px;">Designed for students of Materials Science & Engineering</p>
+</footer>
+
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+<div class="modal-content">
+
+<span class="close" onclick="closeModal()">×</span>
+
+<h2 id="modalTitle"></h2>
+
+<br>
+
+<p id="modalText" style="color:#9db0c7;line-height:1.8;"></p>
+
+</div>
+</div>
+
+
+<script>
+
+/* ============================================================
+   BRAVAIS LATTICE DATA
+============================================================ */
+
+const lattices = [
+
+{
+id:1,
+name:"Simple Cubic",
+short:"Cubic P",
+system:"Cubic",
+centering:"Primitive (P)",
+atoms:"1",
+parameters:"a = b = c ; α = β = γ = 90°",
+a:"a",
+b:"a",
+c:"a",
+angles:"90°",
+points:[
+[0,0,0]
+],
+properties:[
+"One lattice point effectively belongs to the unit cell.",
+"All three edges are equal.",
+"All interaxial angles are 90°.",
+"Coordination number for ideal simple cubic structure is 6."
+],
+examples:"Polonium is the classic elemental example. The structure is important as a fundamental model for cubic crystallography."
+},
+
+{
+id:2,
+name:"Body-Centered Cubic",
+short:"Cubic I",
+system:"Cubic",
+centering:"Body-centered (I)",
+atoms:"2",
+parameters:"a = b = c ; α = β = γ = 90°",
+a:"a",
+b:"a",
+c:"a",
+angles:"90°",
+points:[
+[0,0,0],
+[0.5,0.5,0.5]
+],
+properties:[
+"Eight corner points plus one body-centered point.",
+"Effective lattice points per conventional cell = 2.",
+"High packing efficiency compared with simple cubic.",
+"Common metallic crystal structure."
+],
+examples:"Iron (α-Fe), chromium and tungsten have BCC structures at suitable conditions."
+},
+
+{
+id:3,
+name:"Face-Centered Cubic",
+short:"Cubic F",
+system:"Cubic",
+centering:"Face-centered (F)",
+atoms:"4",
+parameters:"a = b = c ; α = β = γ = 90°",
+a:"a",
+b:"a",
+c:"a",
+angles:"90°",
+points:[
+[0,0,0],
+[0.5,0.5,0],
+[0.5,0,0.5],
+[0,0.5,0.5]
+],
+properties:[
+"Points occur at corners and face centers.",
+"Effective lattice points per conventional cell = 4.",
+"Highly packed cubic arrangement.",
+"Coordination number of an FCC atomic structure is 12."
+],
+examples:"Aluminum, copper, silver, gold and nickel commonly have FCC structures."
+},
+
+{
+id:4,
+name:"Primitive Tetragonal",
+short:"Tetragonal P",
+system:"Tetragonal",
+centering:"Primitive (P)",
+atoms:"1",
+parameters:"a = b ≠ c ; α = β = γ = 90°",
+a:"a",
+b:"a",
+c:"c",
+angles:"90°",
+points:[
+[0,0,0]
+],
+properties:[
+"Two equal horizontal axes.",
+"The vertical axis differs in length.",
+"All angles are 90°.",
+"Primitive tetragonal cell contains one effective lattice point."
+],
+examples:"β-Sn (white tin) is commonly cited as an example with a tetragonal structure."
+},
+
+{
+id:5,
+name:"Body-Centered Tetragonal",
+short:"Tetragonal I",
+system:"Tetragonal",
+centering:"Body-centered (I)",
+atoms:"2",
+parameters:"a = b ≠ c ; α = β = γ = 90°",
+a:"a",
+b:"a",
+c:"c",
+angles:"90°",
+points:[
+[0,0,0],
+[0.5,0.5,0.5]
+],
+properties:[
+"Two equal axes and one different axis.",
+"One body-centered point is added.",
+"Effective lattice points = 2.",
+"Important in several intermetallic and ceramic structures."
+],
+examples:"β-U and several technologically important intermetallic compounds exhibit body-centered tetragonal structures."
+},
+
+{
+id:6,
+name:"Primitive Orthorhombic",
+short:"Orthorhombic P",
+system:"Orthorhombic",
+centering:"Primitive (P)",
+atoms:"1",
+parameters:"a ≠ b ≠ c ; α = β = γ = 90°",
+a:"a",
+b:"b",
+c:"c",
+angles:"90°",
+points:[
+[0,0,0]
+],
+properties:[
+"All three edges have different lengths.",
+"All angles are 90°.",
+"Primitive orthorhombic cell has one effective lattice point.",
+"Orthorhombic symmetry is lower than cubic and tetragonal symmetry."
+],
+examples:"Orthorhombic structures occur in many minerals and molecular crystals."
+},
+
+{
+id:7,
+name:"Body-Centered Orthorhombic",
+short:"Orthorhombic I",
+system:"Orthorhombic",
+centering:"Body-centered (I)",
+atoms:"2",
+parameters:"a ≠ b ≠ c ; α = β = γ = 90°",
+a:"a",
+b:"b",
+c:"c",
+angles:"90°",
+points:[
+[0,0,0],
+[0.5,0.5,0.5]
+],
+properties:[
+"Three unequal perpendicular axes.",
+"One body-centered lattice point.",
+"Effective lattice points = 2.",
+"Has orthorhombic symmetry."
+],
+examples:"This lattice type appears in various intermetallic and inorganic compounds."
+},
+
+{
+id:8,
+name:"Face-Centered Orthorhombic",
+short:"Orthorhombic F",
+system:"Orthorhombic",
+centering:"Face-centered (F)",
+atoms:"4",
+parameters:"a ≠ b ≠ c ; α = β = γ = 90°",
+a:"a",
+b:"b",
+c:"c",
+angles:"90°",
+points:[
+[0,0,0],
+[0.5,0.5,0],
+[0.5,0,0.5],
+[0,0.5,0.5]
+],
+properties:[
+"Three unequal mutually perpendicular axes.",
+"Face-centered lattice arrangement.",
+"Effective lattice points = 4.",
+"Frequently encountered in complex inorganic structures."
+],
+examples:"Many compounds and minerals can adopt face-centered orthorhombic arrangements."
+},
+
+{
+id:9,
+name:"Base-Centered Orthorhombic",
+short:"Orthorhombic C",
+system:"Orthorhombic",
+centering:"Base-centered (C)",
+atoms:"2",
+parameters:"a ≠ b ≠ c ; α = β = γ = 90°",
+a:"a",
+b:"b",
+c:"c",
+angles:"90°",
+points:[
+[0,0,0],
+[0.5,0.5,0]
+],
+properties:[
+"Three unequal perpendicular axes.",
+"Additional points occur on a pair of opposite faces.",
+"Effective lattice points = 2.",
+"Also called end-centered or base-centered."
+],
+examples:"Occurs in a variety of orthorhombic crystals."
+},
+
+{
+id:10,
+name:"Primitive Monoclinic",
+short:"Monoclinic P",
+system:"Monoclinic",
+centering:"Primitive (P)",
+atoms:"1",
+parameters:"a ≠ b ≠ c ; α = γ = 90°, β ≠ 90°",
+a:"a",
+b:"b",
+c:"c",
+angles:"β ≠ 90°",
+points:[
+[0,0,0]
+],
+properties:[
+"Three unequal edges.",
+"Two angles are 90° while one angle is not.",
+"Primitive cell contains one effective lattice point.",
+"Common crystal system in minerals."
+],
+examples:"Gypsum and many molecular crystals show monoclinic symmetry."
+},
+
+{
+id:11,
+name:"Base-Centered Monoclinic",
+short:"Monoclinic C",
+system:"Monoclinic",
+centering:"Base-centered (C)",
+atoms:"2",
+parameters:"a ≠ b ≠ c ; α = γ = 90°, β ≠ 90°",
+a:"a",
+b:"b",
+c:"c",
+angles:"β ≠ 90°",
+points:[
+[0,0,0],
+[0.5,0.5,0]
+],
+properties:[
+"Monoclinic geometry.",
+"Two opposite faces contain additional lattice points.",
+"Effective lattice points = 2.",
+"One interaxial angle differs from 90°."
+],
+examples:"Many minerals and inorganic compounds crystallize in C-centered monoclinic cells."
+},
+
+{
+id:12,
+name:"Primitive Triclinic",
+short:"Triclinic P",
+system:"Triclinic",
+centering:"Primitive (P)",
+atoms:"1",
+parameters:"a ≠ b ≠ c ; α ≠ β ≠ γ and generally none = 90°",
+a:"a",
+b:"b",
+c:"c",
+angles:"α,β,γ arbitrary",
+points:[
+[0,0,0]
+],
+properties:[
+"Lowest crystal symmetry.",
+"All three edges can be different.",
+"All three angles can be different.",
+"Primitive cell contains one effective lattice point."
+],
+examples:"Kyanite and copper sulfate pentahydrate are examples associated with triclinic symmetry."
+},
+
+{
+id:13,
+name:"Primitive Hexagonal",
+short:"Hexagonal P",
+system:"Hexagonal",
+centering:"Primitive (P)",
+atoms:"1",
+parameters:"a = b ≠ c ; α = β = 90°, γ = 120°",
+a:"a",
+b:"a",
+c:"c",
+angles:"90°,90°,120°",
+points:[
+[0,0,0]
+],
+properties:[
+"Two equal basal axes.",
+"Third axis has a different length.",
+"Basal-plane angle is 120°.",
+"Characteristic sixfold rotational symmetry."
+],
+examples:"Graphite and magnesium commonly exhibit hexagonal crystal structures."
+},
+
+{
+id:14,
+name:"Rhombohedral (Trigonal)",
+short:"Trigonal R",
+system:"Trigonal",
+centering:"Rhombohedral (R)",
+atoms:"1",
+parameters:"a = b = c ; α = β = γ ≠ 90°",
+a:"a",
+b:"a",
+c:"a",
+angles:"α = β = γ ≠ 90°",
+points:[
+[0,0,0]
+],
+properties:[
+"Three equal edge lengths.",
+"Three equal angles that are not 90°.",
+"Rhombohedral lattice is associated with the trigonal crystal system.",
+"Has threefold rotational symmetry."
+],
+examples:"Calcite and quartz are important minerals with trigonal crystal symmetry."
+}
+
+];
+
+
+/* ============================================================
+   RENDER LATTICE CARDS
+============================================================ */
+
+function renderCards(){
+
+const grid=document.getElementById("latticeGrid");
+
+const search=document.getElementById("search").value.toLowerCase();
+
+const filter=document.getElementById("systemFilter").value;
+
+grid.innerHTML="";
+
+lattices
+.filter(l=>{
+    const matchSearch=
+        l.name.toLowerCase().includes(search) ||
+        l.system.toLowerCase().includes(search) ||
+        l.centering.toLowerCase().includes(search) ||
+        l.short.toLowerCase().includes(search);
+
+    const matchSystem=
+        filter==="all" || l.system===filter;
+
+    return matchSearch && matchSystem;
+})
+.forEach(l=>{
+
+const card=document.createElement("div");
+
+card.className="lattice-card";
+
+card.innerHTML=`
+    <div class="number">LATTICE ${l.id}</div>
+    <h3>${l.name}</h3>
+    <div class="system">${l.system}</div>
+    <p><b>${l.centering}</b></p>
+    <p style="margin-top:8px;">
+        ${l.parameters}
+    </p>
+`;
+
+card.onclick=()=>selectLattice(l.id);
+
+grid.appendChild(card);
+
+});
+
+}
+
+
+/* ============================================================
+   THREE.JS
+============================================================ */
+
+let scene;
+let camera;
+let renderer;
+let controls;
+let currentGroup;
+
+
+function init3D(){
+
+const container=document.getElementById("canvas-container");
+
+scene=new THREE.Scene();
+
+scene.background=new THREE.Color(0x07111f);
+
+camera=new THREE.PerspectiveCamera(
+    45,
+    container.clientWidth/container.clientHeight,
+    0.1,
+    1000
+);
+
+camera.position.set(4,4,5);
+
+renderer=new THREE.WebGLRenderer({
+    antialias:true,
+    alpha:true
+});
+
+renderer.setPixelRatio(window.devicePixelRatio);
+
+renderer.setSize(
+    container.clientWidth,
+    container.clientHeight
+);
+
+container.appendChild(renderer.domElement);
+
+controls=new THREE.OrbitControls(
+    camera,
+    renderer.domElement
+);
+
+controls.enableDamping=true;
+
+const ambient=new THREE.AmbientLight(
+    0xffffff,
+    .7
+);
+
+scene.add(ambient);
+
+const light=new THREE.DirectionalLight(
+    0xffffff,
+    1
+);
+
+light.position.set(5,8,5);
+
+scene.add(light);
+
+window.addEventListener("resize",resize3D);
+
+animate();
+
+}
+
+
+function resize3D(){
+
+const container=document.getElementById("canvas-container");
+
+camera.aspect=
+    container.clientWidth/container.clientHeight;
+
+camera.updateProjectionMatrix();
+
+renderer.setSize(
+    container.clientWidth,
+    container.clientHeight
+);
+
+}
+
+
+/* ============================================================
+   CREATE LATTICE MODEL
+============================================================ */
+
+function createModel(lattice){
+
+if(currentGroup){
+
+scene.remove(currentGroup);
+
+}
+
+currentGroup=new THREE.Group();
+
+const size=2;
+
+const material=new THREE.LineBasicMaterial({
+    color:0x38bdf8
+});
+
+const pointMaterial=new THREE.MeshStandardMaterial({
+    color:0x38bdf8,
+    emissive:0x0b5b7e,
+    emissiveIntensity:.5
+});
+
+const sphereGeometry=new THREE.SphereGeometry(
+    .09,
+    20,
+    20
+);
+
+
+/* UNIT CELL EDGES */
+
+const vertices=[
+    new THREE.Vector3(-1,-1,-1),
+    new THREE.Vector3(1,-1,-1),
+    new THREE.Vector3(1,1,-1),
+    new THREE.Vector3(-1,1,-1),
+    new THREE.Vector3(-1,-1,1),
+    new THREE.Vector3(1,-1,1),
+    new THREE.Vector3(1,1,1),
+    new THREE.Vector3(-1,1,1)
+];
+
+const edges=[
+    [0,1],[1,2],[2,3],[3,0],
+    [4,5],[5,6],[6,7],[7,4],
+    [0,4],[1,5],[2,6],[3,7]
+];
+
+edges.forEach(e=>{
+
+const geometry=new THREE.BufferGeometry()
+    .setFromPoints([
+        vertices[e[0]],
+        vertices[e[1]]
+    ]);
+
+const line=new THREE.Line(
+    geometry,
+    material
+);
+
+currentGroup.add(line);
+
+});
+
+
+/* LATTICE POINTS */
+
+let positions=[];
+
+const type=lattice.centering;
+
+if(type.includes("Primitive")){
+
+positions=[
+    [0,0,0]
+];
+
+}
+else if(type.includes("Body-centered")){
+
+positions=[
+    [0,0,0],
+    [.5,.5,.5]
+];
+
+}
+else if(type.includes("Face-centered")){
+
+positions=[
+    [0,0,0],
+    [.5,.5,0],
+    [.5,0,.5],
+    [0,.5,.5]
+];
+
+}
+else if(type.includes("Base-centered")){
+
+positions=[
+    [0,0,0],
+    [.5,.5,0]
+];
+
+}
+else{
+
+positions=[
+    [0,0,0]
+];
+
+}
+
+
+/* For hexagonal/trigonal make visually distinctive */
+
+if(lattice.system==="Hexagonal"){
+
+positions=[
+    [0,0,0],
+    [0,0,1]
+];
+
+}
+
+if(lattice.system==="Trigonal"){
+
+positions=[
+    [0,0,0],
+    [.5,.5,.5]
+];
+
+}
+
+
+positions.forEach(p=>{
+
+const sphere=new THREE.Mesh(
+    sphereGeometry,
+    pointMaterial
+);
+
+sphere.position.set(
+    (p[0]-.5)*size*1.6,
+    (p[1]-.5)*size*1.6,
+    (p[2]-.5)*size*1.6
+);
+
+currentGroup.add(sphere);
+
+});
+
+
+/* AXES */
+
+const axes=new THREE.AxesHelper(2.7);
+
+currentGroup.add(axes);
+
+scene.add(currentGroup);
+
+resetCamera();
+
+}
+
+
+/* ============================================================
+   SELECT LATTICE
+============================================================ */
+
+let selected=lattices[0];
+
+function selectLattice(id){
+
+selected=lattices.find(l=>l.id===id);
+
+document.getElementById("selectedName").textContent=
+    selected.name;
+
+document.getElementById("selectedSystem").textContent=
+    selected.system+" System";
+
+document.getElementById("selectedCentering").textContent=
+    selected.centering;
+
+document.getElementById("paramA").textContent=
+    selected.a;
+
+document.getElementById("paramB").textContent=
+    selected.b;
+
+document.getElementById("paramC").textContent=
+    selected.c;
+
+document.getElementById("paramAngles").textContent=
+    selected.angles;
+
+document.getElementById("selectedProperties").innerHTML=
+    selected.properties
+    .map(x=>`<li>${x}</li>`)
+    .join("");
+
+document.getElementById("selectedExamples").textContent=
+    selected.examples;
+
+createModel(selected);
+
+document.getElementById("viewer")
+    .scrollIntoView({
+        behavior:"smooth",
+        block:"start"
+    });
+
+}
+
+
+/* ============================================================
+   CAMERA
+============================================================ */
+
+function resetCamera(){
+
+camera.position.set(4,3.5,5);
+
+controls.target.set(0,0,0);
+
+controls.update();
+
+}
+
+function randomLattice(){
+
+const random=
+    lattices[Math.floor(Math.random()*lattices.length)];
+
+selectLattice(random.id);
+
+}
+
+
+/* ============================================================
+   ANIMATION
+============================================================ */
+
+function animate(){
+
+requestAnimationFrame(animate);
+
+controls.update();
+
+if(currentGroup){
+
+currentGroup.rotation.y+=0.0015;
+
+}
+
+renderer.render(scene,camera);
+
+}
+
+
+/* ============================================================
+   COMPARISON TABLE
+============================================================ */
+
+function createTable(){
+
+const body=document.getElementById("comparisonBody");
+
+body.innerHTML=lattices.map(l=>`
+
+<tr onclick="selectLattice(${l.id})" style="cursor:pointer">
+
+<td>${l.id}</td>
+
+<td>
+<strong style="color:white">
+${l.name}
+</strong>
+</td>
+
+<td>${l.system}</td>
+
+<td>${l.centering}</td>
+
+<td>${l.atoms}</td>
+
+<td>${l.parameters}</td>
+
+</tr>
+
+`).join("");
+
+}
+
+
+/* ============================================================
+   QUIZ
+============================================================ */
+
+const questions=[
+
+{
+q:"How many Bravais lattices exist in three-dimensional space?",
+options:["7","10","14","21"],
+answer:2,
+explanation:"There are 14 unique three-dimensional Bravais lattices distributed among seven crystal systems."
+},
+
+{
+q:"How many Bravais lattices belong to the cubic crystal system?",
+options:["1","2","3","4"],
+answer:2,
+explanation:"The cubic system has primitive cubic, body-centered cubic and face-centered cubic."
+},
+
+{
+q:"What does the symbol I represent?",
+options:["Primitive","Body-centered","Face-centered","Base-centered"],
+answer:1,
+explanation:"I denotes a body-centered lattice."
+},
+
+{
+q:"How many effective lattice points are in a conventional FCC unit cell?",
+options:["1","2","3","4"],
+answer:3,
+explanation:"8 corners × 1/8 + 6 faces × 1/2 = 4 effective lattice points."
+},
+
+{
+q:"Which crystal system has a = b = c and α = β = γ = 90°?",
+options:["Cubic","Monoclinic","Triclinic","Hexagonal"],
+answer:0,
+explanation:"These are the characteristic unit-cell relationships of the cubic crystal system."
+},
+
+{
+q:"Which crystal system has a = b ≠ c and γ = 120°?",
+options:["Cubic","Hexagonal","Orthorhombic","Monoclinic"],
+answer:1,
+explanation:"The hexagonal system has a = b ≠ c and γ = 120°."
+},
+
+{
+q:"Which is the lowest-symmetry crystal system?",
+options:["Cubic","Hexagonal","Triclinic","Tetragonal"],
+answer:2,
+explanation:"Triclinic has the lowest crystal symmetry."
+},
+
+{
+q:"How many Bravais lattices are in the orthorhombic system?",
+options:["2","3","4","5"],
+answer:2,
+explanation:"Orthorhombic has P, C, I and F lattices — four in total."
+},
+
+{
+q:"Which lattice contains an additional point at the center of the unit cell?",
+options:["P","I","F","C"],
+answer:1,
+explanation:"I means body-centered, with an additional lattice point at the body center."
+},
+
+{
+q:"What does F mean in Bravais lattice notation?",
+options:["Face-centered","Full-centered","Fixed","Front-centered"],
+answer:0,
+explanation:"F means face-centered."
+}
+
+];
+
+let currentQuestion=0;
+let quizScore=0;
+let answered=false;
+
+function loadQuestion(){
+
+const q=questions[currentQuestion];
+
+document.getElementById("questionNumber").textContent=
+    `Question ${currentQuestion+1} of ${questions.length}`;
+
+document.getElementById("questionText").textContent=q.q;
+
+const options=document.getElementById("options");
+
+options.innerHTML="";
+
+q.options.forEach((option,index)=>{
+
+const div=document.createElement("div");
+
+div.className="option";
+
+div.textContent=option;
+
+div.onclick=()=>checkAnswer(index,div);
+
+options.appendChild(div);
+
+});
+
+document.getElementById("quiz-feedback").textContent="";
+
+answered=false;
+
+}
+
+
+function checkAnswer(index,element){
+
+if(answered)return;
+
+answered=true;
+
+const q=questions[currentQuestion];
+
+const all=document.querySelectorAll(".option");
+
+if(index===q.answer){
+
+element.classList.add("correct");
+
+quizScore++;
+
+document.getElementById("quiz-feedback").innerHTML=
+    "✅ <b>Correct!</b> "+q.explanation;
+
+}
+else{
+
+element.classList.add("wrong");
+
+all[q.answer].classList.add("correct");
+
+document.getElementById("quiz-feedback").innerHTML=
+    "❌ <b>Not quite.</b> "+q.explanation;
+
+}
+
+}
+
+
+function nextQuestion(){
+
+currentQuestion++;
+
+if(currentQuestion>=questions.length){
+
+document.getElementById("questionNumber").textContent=
+    "Quiz Complete 🎉";
+
+document.getElementById("questionText").textContent=
+    `Your score: ${quizScore} / ${questions.length}`;
+
+document.getElementById("options").innerHTML="";
+
+document.getElementById("quiz-feedback").innerHTML=
+    quizScore>=8
+    ? "Excellent! You have a strong understanding of Bravais lattices."
+    : quizScore>=5
+    ? "Good work! Review the crystal systems and centering types once more."
+    : "Keep practicing. Focus on the seven crystal systems and P/I/F/C notation.";
+
+currentQuestion=0;
+quizScore=0;
+
+return;
+
+}
+
+loadQuestion();
+
+}
+
+
+/* ============================================================
+   MODAL
+============================================================ */
+
+function closeModal(){
+
+document.getElementById("modal").style.display="none";
+
+}
+
+function showModal(title,text){
+
+document.getElementById("modalTitle").textContent=title;
+
+document.getElementById("modalText").textContent=text;
+
+document.getElementById("modal").style.display="flex";
+
+}
+
+
+/* ============================================================
+   NAVIGATION
+============================================================ */
+
+function scrollToSection(id){
+
+document.getElementById(id)
+    .scrollIntoView({
+        behavior:"smooth"
+    });
+
+}
+
+
+/* ============================================================
+   INITIALIZATION
+============================================================ */
+
+window.addEventListener("DOMContentLoaded",()=>{
+
+renderCards();
+
+createTable();
+
+init3D();
+
+selectLattice(1);
+
+loadQuestion();
+
+});
+
+</script>
+
+</body>
+</html>
+```
